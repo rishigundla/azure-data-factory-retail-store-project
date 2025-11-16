@@ -1,26 +1,51 @@
-# 📘 Azure Data Factory for Data Engineers — Retail Store Analytics Project
+# Azure Data Factory – Retail Store Analytics Project
 
-This repository contains a full **end-to-end Azure Data Engineering project** built for a Retail Store dataset including **Orders, Order Items, Products, Customers, and Store Locations**.
+This repository contains a **beginner-friendly end-to-end Azure Data Engineering project** that builds a small **Retail Store analytics platform** using:
 
-The solution demonstrates:
+- **Azure Data Factory (ADF)** for orchestration & transformations  
+- **Azure Blob Storage** as the **Landing** zone  
+- **Azure Data Lake Storage Gen2** for **Raw → Cleansed → Analytics** layers  
+- **Azure SQL Database** for the **Structured** (reporting) layer  
 
-- Building a complete multi-zone **Data Lakehouse**
-- Orchestrating pipelines with **Azure Data Factory**
-- Transforming data using **ADF Mapping Data Flows**
-- Modeling datasets for **Azure SQL analytics**
-- Creating **monthly aggregated insights** for BI tools
+The goal is to show how a Data Engineer can design and implement a production-style pipeline that ingests raw retail data, cleans it, structures it for reporting, and produces monthly analytics outputs.
 
 ---
-
 # 🏗️ Solution Architecture
 
-![Architecture](<sandbox:/mnt/data/Screenshot 2025-11-16 101526.png>)
+The project follows a **layered data architecture**:
+
+1. **Landing** – Raw files dropped from external systems (Blob Storage)  
+2. **Raw** – 1:1 copy of landing data in Data Lake Gen2  
+3. **Cleansed** – Typed, validated, and enriched entities  
+4. **Structured** – Star-schema tables stored in Azure SQL DB  
+5. **Analytics** – Aggregated monthly fact tables in Data Lake Gen2  
+
+![Screenshot](https://github.com/rishigundla/azure-data-factory-retail-store-project/blob/main/assets/Course-Azure-Data-Factory-Data-Engineering-on-Azure-and-Fabric-Udemy-11-16-2025_09_50_AM.png)
 
 ---
 
-# 🗂️ Data Lake Zone Blueprint
+## 🔷 High-Level Data Lake Blueprint
 
-![Lake Blueprint](sandbox:/mnt/data/Course-Azure-Data-Factory-Data-Engineering-on-Azure-and-Fabric-Udemy-11-16-2025_09_50_AM.png)
+> **Landing → Raw → Cleansed → Structured → Analytics**
+
+![Lake Blueprint](https://github.com/rishigundla/azure-data-factory-retail-store-project/blob/main/assets/Screenshot%202025-11-16%20093646.png)
+
+---
+
+## 🔶 Entity-Level Architecture (Retail Domain)
+
+Each layer stores the following entities:
+
+- **ORDERS**
+- **ORDER_ITEMS**
+- **STORES**
+- **PRODUCTS**
+- **CUSTOMERS**
+
+### Monthly Analytics:
+
+- `STORES_ORDERS_MONTHLY`
+- `PRODUCTS_ORDERS_MONTHLY`
 
 ---
 
@@ -44,204 +69,213 @@ retail-store-adf-project/
 
 ---
 
-# 1️⃣ Environment Setup
+# 🧱 Storage Design
 
-## 🔹 Azure Data Lake Gen2 — Layered Storage
+## 1️⃣ Landing Zone – Azure Blob Storage
 
-![Layers](<sandbox:/mnt/data/Screenshot 2025-11-16 101453.png>)
+Raw files (JSON, TXT, Parquet) land in the **`landing`** container of a Blob Storage account:
 
-![Layers2](<sandbox:/mnt/data/Screenshot 2025-11-16 101512.png>)
+- `customers.json`
+- `order_items.txt`
+- `orders.parquet`
+- `products.json`
+- `stores.json`
 
----
-
-# 2️⃣ Architecture Layers (RAW → CLEANSED → STRUCTURED → ANALYTICS)
-
-![LakeLayers](<sandbox:/mnt/data/Screenshot 2025-11-16 095317.png>)
-
----
-
-# 3️⃣ Azure Data Factory Pipelines
+![Screenshot](assets/Screenshot%202025-11-16%20095228.png)
 
 ---
 
-## ▶ Master Pipeline — `pl_execute_retail`
+## 2️⃣ Data Lake Gen2 – Raw / Cleansed / Structured / Analytics
 
-This pipeline orchestrates the entire workflow:
+All downstream layers are stored in a separate **ADLS Gen2** account.
 
-1. Landing → Raw  
-2. Raw → Cleansed  
-3. Cleansed → Structured  
-4. Structured → Analytics  
+![Screenshot](assets/Screenshot%202025-11-16%20095247.png)
 
-### Screenshot  
-![MasterPipeline](<sandbox:/mnt/data/Screenshot 2025-11-16 100559.png>)
+### 📂 Raw Container
 
----
+Partitioned by load date:
 
-## ▶ Pipeline: `pl_landing_to_raw`
+raw/
+└── 2025-11-15/
+├── customers.json
+├── order_items.txt
+├── orders.parquet
+├── products.json
+└── stores.json
 
-Performs initial ingestion using Copy Data activities for:
+![Screenshot](assets/Screenshot%202025-11-16%20095317.png)
 
-- Customers  
-- Orders  
-- Order Items  
-- Products  
-- Stores  
+### 📂 Cleansed Container
 
-### Screenshots  
-![LandingToRaw](<sandbox:/mnt/data/Screenshot 2025-11-16 100537.png>)  
-![LandingToRaw2](<sandbox:/mnt/data/Screenshot 2025-11-16 100550.png>)  
-![LandingToRaw3](<sandbox:/mnt/data/Screenshot 2025-11-16 100212.png>)
+Entity-wise folders, typed & cleaned:
 
----
+cleansed/
+├── customers/
+├── order_items/
+├── orders/
+├── products/
+└── stores/
 
-## ▶ Pipeline: `pl_raw_to_cleansed`
+![Screenshot](assets/Screenshot%202025-11-16%20095308.png)
 
-Transforms raw data:
+### 📂 Analytics Container
 
-- Normalize column names  
-- Cast datatypes  
-- Add timestamps  
-- Format strings  
+Monthly aggregates generated by ADF Mapping Data Flows:
 
-### Screenshots  
-Customers cleansing:  
-![CustomersRawToCleansed](<sandbox:/mnt/data/Screenshot 2025-11-16 095907.png>)
+analytics/
+├── products_orders_monthly/
+└── stores_orders_monthly/
 
-Order Items cleansing:  
-![OrderItemsRawToCleansed](<sandbox:/mnt/data/Screenshot 2025-11-16 095931.png>)
+![Screenshot](assets/Screenshot%202025-11-16%20095258.png)
 
-Orders cleansing:  
-![OrdersRawToCleansed](<sandbox:/mnt/data/Screenshot 2025-11-16 095855.png>)
-
-Products cleansing:  
-![ProductsRawToCleansed](<sandbox:/mnt/data/Screenshot 2025-11-16 095940.png>)
-
-Stores cleansing:  
-![StoresRawToCleansed](<sandbox:/mnt/data/Screenshot 2025-11-16 095920.png>)
+> ℹ️ **Structured Layer** is stored inside **Azure SQL Database**, not as files in ADLS.  
+> Screenshots of SQL tables appear later.
 
 ---
 
-## ▶ Pipeline: `pl_cleansed_to_structured`
+# ⚙️ Azure Data Factory Design
 
-Transforms cleansed data into modeled SQL-like structures:
+The core of the project is implemented in **Azure Data Factory** using:
 
-- Adds computed SUBTOTAL  
-- Standardizes schema  
-- Reorders fields  
-- Adds updated timestamps  
-
-### Screenshots  
-Orders cleansed → structured:  
-![OrdersStruct](<sandbox:/mnt/data/Screenshot 2025-11-16 095247.png>)
-
-Products cleansed → structured:  
-![ProductsStruct](<sandbox:/mnt/data/Screenshot 2025-11-16 095258.png>)
-
-Stores cleansed → structured:  
-![StoresStruct](<sandbox:/mnt/data/Screenshot 2025-11-16 095308.png>)
+- **Pipelines** for orchestration  
+- **Copy Activities** for ingestion  
+- **Mapping Data Flows** for transformation  
 
 ---
 
-## ▶ Pipeline: `pl_structured_to_analytics`
+## 📌 Pipelines Overview
 
-Generates **monthly aggregated insights**:
+Key pipelines:
 
-- Store-wise monthly revenue  
-- Product-wise monthly revenue  
-- Order status distribution  
-
-### Screenshots  
-Stores monthly:  
-![StoresMonthly](<sandbox:/mnt/data/Screenshot 2025-11-16 093646.png>)
-
-Products monthly:  
-![ProductsMonthly](<sandbox:/mnt/data/Screenshot 2025-11-16 100156.png>)
-
-Analytics pipeline:  
-![AnalyticsPipeline](<sandbox:/mnt/data/Screenshot 2025-11-16 100212.png>)
+1. **`pl_landing_to_raw`** – Copy Landing → Raw  
+2. **`pl_raw_to_cleansed`** – Transform Raw → Cleansed  
+3. **`pl_cleansed_to_structured`** – Load Structured → Azure SQL  
+4. **`pl_structured_to_analytics`** – Build monthly aggregates  
+5. **`pl_execute_retail`** – Master pipeline chaining all steps  
 
 ---
 
-# 4️⃣ Data Flows (Mapping Data Flows)
+## 1️⃣ `pl_landing_to_raw` – Ingest Landing → Raw
+
+This pipeline uses **5 Copy activities**, one per entity, to copy files from Blob Storage landing to ADLS Gen2 **raw** zone.
+
+**Source:** Blob Storage `landing` container  
+**Sink:** ADLS Gen2 `raw` container (date-partitioned)
+
+![Screenshot](assets/Screenshot%202025-11-16%20100156.png)
 
 ---
 
-## 🟦 Raw → Cleansed
+## 2️⃣ `pl_raw_to_cleansed` – Raw → Cleansed
 
-### Screenshot  
-![RawToCleansed](<sandbox:/mnt/data/Screenshot 2025-11-16 095228.png>)
+This pipeline triggers ADF **Mapping Data Flows** that:
 
----
+- Cast columns to correct data types  
+- Standardize formats (date, numeric)  
+- Add/update metadata fields like `UPDATED_TIMESTAMP`  
+- Reorder/rename columns to a canonical schema
 
-## 🟩 Cleansed → Structured
+![Screenshot](assets/Screenshot%202025-11-16%20100212.png)
 
-### Screenshot  
-![CleansedToStructured](<sandbox:/mnt/data/Screenshot 2025-11-16 095317.png>)
+### Example Data Flows:
 
----
+- Customers Raw → Cleansed
+  ![Screenshot](assets/Screenshot%202025-11-16%20095855.png)
+  
+- Order Items Raw → Cleansed
+  ![Screenshot](assets/Screenshot%202025-11-16%20095907.png)
+  
+- Orders Raw → Cleansed
+  ![Screenshot](assets/Screenshot%202025-11-16%20095920.png)
+  
+- Products Raw → Cleansed
+  ![Screenshot](assets/Screenshot%202025-11-16%20095931.png)
+  
+- Customer Raw → Cleansed
+  ![Screenshot](assets/Screenshot%202025-11-16%20095940.png)
 
-## 🟧 Structured → Analytics
-
-Product-level:  
-![ProductAnalyticsFlow](<sandbox:/mnt/data/Screenshot 2025-11-16 093646.png>)
-
-Store-level:  
-![StoreAnalyticsFlow](<sandbox:/mnt/data/Screenshot 2025-11-16 093646.png>)
-
----
-
-# 5️⃣ SQL Structured Layer
-
-Final curated data is loaded into Azure SQL DB.
-
----
-
-## STORES Table  
-![SQLStores](<sandbox:/mnt/data/Screenshot 2025-11-16 100804.png>)
+Each flow writes to the **`cleansed/`** container (`ds_cleansed_*` datasets).
 
 ---
 
-## PRODUCTS Table  
-![SQLProducts](<sandbox:/mnt/data/Screenshot 2025-11-16 100752.png>)
+## 3️⃣ `pl_cleansed_to_structured` – Cleansed → Azure SQL DB
+
+This pipeline loads cleansed Parquet/JSON files into **Azure SQL Database**, applying:
+
+- Final transformations  
+- Schema enforcement  
+- Simple **upsert** logic using business keys
+
+![Screenshot](assets/Screenshot%202025-11-16%20100537.png)
+
+### Example Data Flows:
+
+- Orders Cleansed → Structured
+  ![Screenshot](assets/Screenshot%202025-11-16%20100005.png)
+  
+- Products Cleansed → Structured
+  ![Screenshot](assets/Screenshot%202025-11-16%20100016.png)
+  
+- Stores Cleansed → Structured
+  ![Screenshot](assets/Screenshot%202025-11-16%20100026.png)
 
 ---
 
-## ORDER_ITEMS Table  
-![SQLOrderItems](<sandbox:/mnt/data/Screenshot 2025-11-16 100740.png>)
+## 4️⃣ `pl_structured_to_analytics` – Structured → Analytics
+
+Builds **monthly aggregated fact tables** using Mapping Data Flows.
+
+![Screenshot](assets/Screenshot%202025-11-16%20100550.png)
+
+### Example Outputs:
+
+- **`stores_orders_monthly`**  
+  - Total order amount by *store*, *order status*, *month*
+      ![Screenshot](assets/Screenshot%202025-11-16%20100054.png)
+
+- **`products_orders_monthly`**  
+  - Total order amount by *product*, *order status*, *month*
+      ![Screenshot](assets/Screenshot%202025-11-16%20100044.png)
+
+These are written as Parquet files into the **analytics** container.
 
 ---
 
-## ORDERS Table  
-![SQLOrders](<sandbox:/mnt/data/Screenshot 2025-11-16 100804.png>)
+## 5️⃣ `pl_execute_retail` – Master Orchestration Pipeline
+
+This pipeline executes all other pipelines in sequence:
+
+1. `pl_landing_to_raw`  
+2. `pl_raw_to_cleansed`  
+3. `pl_cleansed_to_structured`  
+4. `pl_structured_to_analytics`  
+
+![Screenshot](assets/Screenshot%202025-11-16%20100559.png)
 
 ---
 
-# 6️⃣ Analytics Layer Output (SQL)
+# 🗄️ Structured Layer – Azure SQL Database
 
-Outputs include:
+The **Structured** layer is modeled as SQL tables in the `store-retail` Azure SQL DB.
 
-- `PRODUCTS_ORDERS_MONTHLY`
-- `STORES_ORDERS_MONTHLY`
+DDL scripts are located in:
 
----
+- `data_lake/structured/sql_scripts/orders_ddl.sql`
+- [orders_ddl](https://github.com/rishigundla/azure-data-factory-retail-store-project/blob/main/data_lake/structured/sql_scripts/orders_ddl.sql)
 
-# 7️⃣ End-to-End Flow Summary
+### Example Tables:
 
-### ✔ Extract  
-Landing → Raw (Copy Data)
+- `STORES`
+  ![Screenshot](assets/Screenshot%202025-11-16%20100559.png)
+  
+- `PRODUCTS`
+  ![Screenshot](assets/Screenshot%202025-11-16%20100752.png)
+  
+- `ORDERS`
+  ![Screenshot](assets/Screenshot%202025-11-16%20100804.png)
+  
 
-### ✔ Transform  
-Raw → Cleansed (Data Flows)
-
-### ✔ Model  
-Cleansed → Structured (SQL-shaped)
-
-### ✔ Aggregate  
-Structured → Analytics (Monthly KPIs)
-
-### ✔ Serve  
-SQL tables → BI (Power BI / Tableau)
+These are used by the Analytics Data Flows to build monthly summary datasets.
 
 ---
 
